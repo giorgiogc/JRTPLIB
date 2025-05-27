@@ -1396,10 +1396,38 @@ int RTPSession::ProcessPolledData()
 		SCHED_LOCK
 		if ((status = sources.ProcessRawPacket(rawpack,rtptrans,acceptownpackets)) < 0)
 		{
+#if defined USE_ORIGINAL_CODE
 			SCHED_UNLOCK
-			SOURCES_UNLOCK
-			RTPDelete(rawpack,GetMemoryManager());
+				SOURCES_UNLOCK
+				RTPDelete( rawpack, GetMemoryManager() );
 			return status;
+#else
+			// If an Invalid RTP Packet was received ...
+			if ( status == ERR_RTP_PACKET_INVALIDPACKET )
+			{
+//				OutputDebugString( "RTP Packet Status: ERR_RTP_PACKET_INVALIDPACKET " );
+
+				// Set the flag to indicate that an Invalid RTP Packet has been received which is used to detect non-RTP 
+				// packets such as STUN packets that are permitted to be used as RTP Keep Alive packets per RFC 6263 
+				m_bInvalidRtpPacketReceived = true;
+
+				// In the original code the status value is returned as zero if an Invalid Packet is received.  As such 
+				// the status must be set to zero to allow the code to proceed as originally intended.
+				status = 0;
+			}
+			// An erroneous but not Invalid RTP Packet was received ..
+			else
+			{
+//				char szMessage[ 51 ];
+//				sprintf( szMessage, "RTP Packet Status: %d", status );
+//				OutputDebugString( szMessage );
+
+				SCHED_UNLOCK
+					SOURCES_UNLOCK
+					RTPDelete( rawpack, GetMemoryManager() );
+				return status;
+			}
+#endif
 		}
 		SCHED_UNLOCK
 				
@@ -1701,6 +1729,17 @@ int RTPSession::SendRTCPData(const void *data, size_t len)
 
 	return status;
 }
+
+#if !defined USE_ORIGINAL_CODE
+bool RTPSession::IsInvalidRtpPacketReceived()
+{
+	bool o_bInvalidRtpPacketReceived = m_bInvalidRtpPacketReceived;
+
+	m_bInvalidRtpPacketReceived = false;
+
+	return( o_bInvalidRtpPacketReceived );
+}
+#endif
 
 #ifdef RTPDEBUG
 void RTPSession::DumpSources()

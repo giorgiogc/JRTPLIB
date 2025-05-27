@@ -451,6 +451,13 @@ public:
 	/** Sets the SDES note item for the local participant to the value \c s with length \c len. */
 	int SetLocalNote(const void *s,size_t len);
 
+#if !defined USE_ORIGINAL_CODE
+/** Gets the flag to indicate that an Invalid RTP Packet has been received which is used to detect non-RTP
+packets such as STUN packets that are permitted to be used as RTP Keep Alive packets per RFC 6263
+*/
+	virtual bool IsInvalidRtpPacketReceived( void );
+#endif
+
 #ifdef RTPDEBUG
 	void DumpSources();
 	void DumpTransmitter();
@@ -649,6 +656,10 @@ private:
 #endif // RTP_SUPPORT_THREAD
 	friend class RTPSessionSources;
 	friend class RTCPSessionPacketBuilder;
+
+#if !defined USE_ORIGINAL_CODE
+	bool m_bInvalidRtpPacketReceived;
+#endif
 };
 
 inline RTPTransmitter *RTPSession::NewUserDefinedTransmitter()                                          { return 0; }
